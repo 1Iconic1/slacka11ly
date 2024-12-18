@@ -1,0 +1,175 @@
+# EasySlack
+
+A low-code Python module for customizing Slack notifications with screen reader support. Designed for blind and visually impaired users to have better control over their Slack messaging experience.
+
+## Features
+
+✅ **Sound Notifications**
+
+- Different sounds for different message types
+- Priority-based notification system
+- System sound integration
+
+✅ **Screen Reader Integration**
+
+- Works with VoiceOver on macOS
+- Customizable speech settings
+- Message queuing support
+
+✅ **Priority System**
+
+- HIGH priority messages break through FOCUSED mode
+- LOW priority messages only in ACTIVE mode
+- Buffer messages based on status
+
+## Quick Start
+
+1. **Install the package**
+
+```bash
+pip install easy-slack
+```
+
+2. **Set up your Slack app**
+
+- Create new Slack app at [api.slack.com](https://api.slack.com/apps)
+- Enable Socket Mode
+- Add required bot scopes:
+  - users:read
+  - users:read.email
+  - channels:read
+  - im:read
+  - im:write
+  - chat:write
+- Install app to workspace
+- Save bot token (xoxb-) and app token (xapp-)
+
+3. **Basic usage**
+
+```python
+from easy_slack import EasySlack, NotificationPriority, NotifySound
+import asyncio
+
+async def main():
+    # Initialize and login
+    slack = EasySlack()
+    await slack.login("your.email@example.com")
+
+    # Create notification profile
+    slack.notify_manager.create_profile(
+        name="manager_message",
+        sound_type=NotifySound.URGENT,
+        title_template="Message from Manager",
+        message_template="{sender}: {content}",
+        priority=NotificationPriority.HIGH
+    )
+
+    # Create rule
+    slack.when("message") \
+        .from_person("manager@example.com") \
+        .with_priority(NotificationPriority.HIGH) \
+        .play_sound("manager_message") \
+        .done()
+
+    print("Setup complete! Press Ctrl+C to stop")
+    await slack.start()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+```
+
+## Command Line Interface
+
+```bash
+# Setup workspace
+python -m easy_slack setup
+
+# Add notification rule
+python -m easy_slack rules add
+
+# List current rules
+python -m easy_slack rules list
+
+# Set user status
+python -m easy_slack set-status
+```
+
+## Priority Levels
+
+- **CRITICAL**: Always notifies, breaks through DND
+- **HIGH**: Breaks through FOCUSED mode
+- **MEDIUM**: Normal priority
+- **LOW**: Only in ACTIVE status
+
+## Sound Types
+
+- **URGENT**: Glass sound (Important messages)
+- **MENTION**: Ping sound (@mentions)
+- **MESSAGE**: Morse sound (Regular messages)
+- **DM**: Purr sound (Direct messages)
+- **SUCCESS**: Bottle sound (Confirmations)
+- **WARNING**: Basso sound (Alerts)
+
+## Status Modes
+
+- **ACTIVE**: All notifications delivered
+- **FOCUSED**: Only HIGH/CRITICAL notifications
+- **DND**: Only CRITICAL notifications
+- **AWAY**: Standard notification behavior
+
+## Working Examples
+
+### Monitor Manager Messages
+
+```python
+# High priority with voice
+slack.notify_manager.create_profile(
+    name="manager_message",
+    sound_type=NotifySound.URGENT,
+    title_template="Message from Manager",
+    message_template="{sender}: {content}",
+    priority=NotificationPriority.HIGH
+)
+
+slack.when("message") \
+    .from_person("manager@company.com") \
+    .with_priority(NotificationPriority.HIGH) \
+    .play_sound("manager_message") \
+    .done()
+```
+
+### Channel Monitoring
+
+```python
+# Low priority with sound only
+slack.notify_manager.create_profile(
+    name="channel_notify",
+    sound_type=NotifySound.MESSAGE,
+    title_template="Channel Update",
+    message_template="New message in channel",
+    priority=NotificationPriority.LOW
+)
+
+slack.when("message") \
+    .in_channel("team-updates") \
+    .with_priority(NotificationPriority.LOW) \
+    .play_sound("channel_notify") \
+    .done()
+```
+
+## Requirements
+
+- Python 3.8+
+- macOS for VoiceOver support
+- Slack workspace admin privileges
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Commit changes
+4. Push to branch
+5. Open pull request
