@@ -4,7 +4,7 @@ import asyncio
 async def main():
     slack = EasySlack()
     print("Connecting to Slack...")
-    if not await slack.login("nikhilv1@uci.edu"):
+    if not await slack.login("dwaynem@uci.edu"):
         print("Failed to connect!")
         return
 
@@ -20,7 +20,7 @@ async def main():
     # Create rule for channel monitoring
     slack.when("message") \
         .in_channel("slacka11lytest") \
-        .with_priority(NotificationPriority.LOW) \
+        .with_priority(NotificationPriority.HIGH) \
         .play_sound("channel_notification") \
         .done()
 

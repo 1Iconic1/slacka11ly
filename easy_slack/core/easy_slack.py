@@ -68,6 +68,7 @@ class EasySlack:
         """Login to Slack workspace and set up components"""
         try:
             # Get tokens from database
+
             tokens = self.db.get_tokens()
             if not tokens:
                 self.notify_manager.notify(
@@ -87,6 +88,7 @@ class EasySlack:
 
             # Set up clients
             self._web_client = WebClient(token=tokens['bot_token'])
+        
             self._event_handler = SlackEventHandler(
                 app_token=tokens['app_token'],
                 bot_token=tokens['bot_token']
@@ -111,6 +113,8 @@ class EasySlack:
             self._event_handler.on_message(self._handle_message)
             self._event_handler.on_presence_change(self._handle_presence_change)
             self._event_handler.on_status_change(self._handle_status_change)
+
+           
 
             return True
 
@@ -158,6 +162,11 @@ class EasySlack:
                 )
         except Exception as e:
             self.logger.error(f"Error setting status: {str(e)}")
+    def change_workspace(self,bot,app):
+        """Swithces between Slack workspaces"""
+        self.db.save_tokens(bot,app)
+        return None
+
 
     def add_exception(self, email: str):
         """Add notification exception"""

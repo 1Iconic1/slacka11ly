@@ -3,7 +3,9 @@ import asyncio
 import threading
 from easy_slack import EasySlack, NotificationPriority, NotifySound
 
+
 app = Flask(__name__)
+
 
 def run_slack_bot(email):
     async def main():
@@ -30,13 +32,13 @@ def run_slack_bot(email):
         )
 
         slack.when("message") \
-            .from_person("kapil@uci.edu") \
+            .from_person("djmorganjr22@gmail.com") \
             .with_priority(NotificationPriority.HIGH) \
             .play_sound("manager_message1") \
             .done()
 
         slack.when("message") \
-            .from_person("nikhilv1@uci.edu") \
+            .from_person("dwaynemorgan2024@u.northwstern.edu") \
             .with_priority(NotificationPriority.HIGH) \
             .play_sound("intern_message") \
             .done()

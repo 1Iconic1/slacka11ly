@@ -20,7 +20,6 @@ class SlackEventHandler:
             app_token=app_token,
             web_client=self.web_client
         )
-        
         self._message_handler: Optional[Callable] = None
         self._presence_handler: Optional[Callable] = None
         self._status_handler: Optional[Callable] = None
@@ -39,11 +38,9 @@ class SlackEventHandler:
         def handle_events(client, req):
             if not self._running:
                 return
-
             if req.type == "events_api":
                 event = req.payload["event"]
                 event_type = event["type"]
-                
                 try:
                     if event_type == "message" and self._message_handler:
                         asyncio.run_coroutine_threadsafe(

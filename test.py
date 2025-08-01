@@ -1,15 +1,16 @@
 from easy_slack import EasySlack, NotificationPriority, NotifySound, MessageType
 import asyncio
-
+#python -m easy_slack.cli.setup_cli
 async def main():
     slack = EasySlack()
     print("Connecting to Slack...")
-    if not await slack.login("nikhilv1@uci.edu"):
+    #email adjustment
+    if not await slack.login("dwaynem@uci.edu"):
         print("Failed to connect!")
         return
 
     # Verify user IDs
-    m_info = slack.get_user_by_email("jharwani@uci.edu")
+    m_info = slack.get_user_by_email("djmorganjr22@gmail.com")
     if m_info:
         print(f"Found Manager's Slack ID: {m_info.get('id')}")
     else:

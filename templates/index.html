@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slack Notifier</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        input {
+            padding: 10px;
+            margin: 10px;
+            width: 250px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: green;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: darkgreen;
+        }
+    </style>
+</head>
+<body>
+    <h1>Slack A11y</h1>
+    <input type="email" id="email" placeholder="Enter your email" required>
+    <br>
+    <button onclick="connectSlack()">Connect</button>
+    <p id="status"></p>
+
+    <script>
+        function connectSlack() {
+            var email = document.getElementById("email").value;
+            if (!email) {
+                alert("Please enter a valid email");
+                return;
+            }
+            fetch("/connect", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: "email=" + encodeURIComponent(email)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("status").innerText = data.message;
+            })
+            .catch(error => {
+                document.getElementById("status").innerText = "Error connecting to Slack.";
+            });
+        }
+    </script>
+</body>
+</html>
