@@ -3,20 +3,30 @@ from typing import Optional, Dict, List
 import json
 from pathlib import Path
 import logging
+import threading
 
 class Database:
     """Database management for EasySlack"""
-    
+
     def __init__(self, db_path: str):
         self.db_path = db_path
         self.logger = logging.getLogger("Database")
+        self._connection = None
+        self._lock = threading.Lock()
         self._init_db()
+
+    def _get_connection(self):
+        """Get database connection with thread safety"""
+        with self._lock:
+            if self._connection is None:
+                self._connection = sqlite3.connect(self.db_path, check_same_thread=False)
+            return self._connection
 
     def _init_db(self):
         """Initialize database schema"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.executescript('''
+            conn = self._get_connection()
+            conn.executescript('''
                     -- Users table
                     CREATE TABLE IF NOT EXISTS users (
                         id TEXT PRIMARY KEY,
@@ -69,7 +79,8 @@ class Database:
                         value TEXT
                     );
                 ''')
-                
+            conn.commit()
+
         except sqlite3.Error as e:
             self.logger.error(f"Database initialization error: {str(e)}")
             raise
@@ -81,132 +92,137 @@ class Database:
             'app_token': app_token,
             'user_token': user_token  # New: user token
         })
-        
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute('''
-                INSERT OR REPLACE INTO config (key, value)
-                VALUES (?, ?)
-            ''', ('tokens', tokens))
+
+        conn = self._get_connection()
+        conn.execute('''
+            INSERT OR REPLACE INTO config (key, value)
+            VALUES (?, ?)
+        ''', ('tokens', tokens))
+        conn.commit()
 
     def get_tokens(self) -> Optional[Dict[str, str]]:
         """Get Slack tokens"""
-        with sqlite3.connect(self.db_path) as conn:
-            result = conn.execute('''
-                SELECT value FROM config WHERE key = ?
-            ''', ('tokens',)).fetchone()
-            
-            if result:
-                return json.loads(result[0])
+        conn = self._get_connection()
+        result = conn.execute('''
+            SELECT value FROM config WHERE key = ?
+        ''', ('tokens',)).fetchone()
+
+        if result:
+            return json.loads(result[0])
         return None
 
     def add_user(self, name: str, email: str, slack_id: Optional[str] = None,
                  role: Optional[str] = None) -> str:
         """Add or update user"""
         user_id = f"U{email.split('@')[0]}"
-        
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute('''
-                INSERT OR REPLACE INTO users (id, name, email, slack_id, role)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (user_id, name, email, slack_id, role))
-            
+
+        conn = self._get_connection()
+        conn.execute('''
+            INSERT OR REPLACE INTO users (id, name, email, slack_id, role)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, name, email, slack_id, role))
+        conn.commit()
+
         return user_id
 
     def get_user_by_email(self, email: str) -> Optional[Dict]:
         """Get user by email"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            result = conn.execute('''
-                SELECT * FROM users WHERE email = ?
-            ''', (email,)).fetchone()
-            
-            if result:
-                return dict(result)
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        result = conn.execute('''
+            SELECT * FROM users WHERE email = ?
+        ''', (email,)).fetchone()
+
+        if result:
+            return dict(result)
         return None
 
     def get_user_by_slack_id(self, slack_id: str) -> Optional[Dict]:
         """Get user by Slack ID"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            result = conn.execute('''
-                SELECT * FROM users WHERE slack_id = ?
-            ''', (slack_id,)).fetchone()
-            
-            if result:
-                return dict(result)
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        result = conn.execute('''
+            SELECT * FROM users WHERE slack_id = ?
+        ''', (slack_id,)).fetchone()
+
+        if result:
+            return dict(result)
         return None
 
     def add_tag(self, type: str, entity_id: str, tag: str):
         """Add tag to entity"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute('''
-                INSERT OR REPLACE INTO tags (type, entity_id, tag)
-                VALUES (?, ?, ?)
-            ''', (type, entity_id, tag))
+        conn = self._get_connection()
+        conn.execute('''
+            INSERT OR REPLACE INTO tags (type, entity_id, tag)
+            VALUES (?, ?, ?)
+        ''', (type, entity_id, tag))
+        conn.commit()
 
     def get_tags(self, type: str, entity_id: str) -> List[str]:
         """Get tags for entity"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute('''
-                SELECT tag FROM tags 
-                WHERE type = ? AND entity_id = ?
-            ''', (type, entity_id))
-            return [row[0] for row in cursor.fetchall()]
+        conn = self._get_connection()
+        cursor = conn.execute('''
+            SELECT tag FROM tags
+            WHERE type = ? AND entity_id = ?
+        ''', (type, entity_id))
+        return [row[0] for row in cursor.fetchall()]
 
     def save_rule(self, rule_id: str, name: str, conditions: Dict,
                  actions: List[Dict], priority: str, enabled: bool = True):
         """Save notification rule"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute('''
-                INSERT OR REPLACE INTO rules 
-                (id, name, conditions, actions, priority, enabled)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (
-                rule_id, name, 
-                json.dumps(conditions),
-                json.dumps(actions),
-                priority,
-                1 if enabled else 0
-            ))
+        conn = self._get_connection()
+        conn.execute('''
+            INSERT OR REPLACE INTO rules
+            (id, name, conditions, actions, priority, enabled)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            rule_id, name,
+            json.dumps(conditions),
+            json.dumps(actions),
+            priority,
+            1 if enabled else 0
+        ))
+        conn.commit()
 
     def get_rules(self) -> List[Dict]:
         """Get all notification rules"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute('SELECT * FROM rules')
-            rules = []
-            
-            for row in cursor:
-                rule = dict(row)
-                rule['conditions'] = json.loads(rule['conditions'])
-                rule['actions'] = json.loads(rule['actions'])
-                rule['enabled'] = bool(rule['enabled'])
-                rules.append(rule)
-                
-            return rules
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute('SELECT * FROM rules').fetchall()
 
-    def save_sound_profile(self, profile_id: str, name: str, 
+        return [
+            {
+                **dict(row),
+                'conditions': json.loads(row['conditions']),
+                'actions': json.loads(row['actions']),
+                'enabled': bool(row['enabled'])
+            }
+            for row in rows
+        ]
+
+    def save_sound_profile(self, profile_id: str, name: str,
                          sound_file: str, volume: float = 1.0,
                          pitch: float = 1.0, enabled: bool = True):
         """Save sound profile"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute('''
-                INSERT OR REPLACE INTO sound_profiles 
-                (id, name, sound_file, volume, pitch, enabled)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (profile_id, name, sound_file, volume, pitch, 
-                 1 if enabled else 0))
+        conn = self._get_connection()
+        conn.execute('''
+            INSERT OR REPLACE INTO sound_profiles
+            (id, name, sound_file, volume, pitch, enabled)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (profile_id, name, sound_file, volume, pitch,
+             1 if enabled else 0))
+        conn.commit()
 
     def get_sound_profiles(self) -> List[Dict]:
         """Get all sound profiles"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.execute('SELECT * FROM sound_profiles')
-            profiles = []
-            
-            for row in cursor:
-                profile = dict(row)
-                profile['enabled'] = bool(profile['enabled'])
-                profiles.append(profile)
-                
-            return profiles
+        conn = self._get_connection()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute('SELECT * FROM sound_profiles').fetchall()
+
+        return [
+            {
+                **dict(row),
+                'enabled': bool(row['enabled'])
+            }
+            for row in rows
+        ]
