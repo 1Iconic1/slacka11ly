@@ -2,8 +2,7 @@ import platform
 import subprocess
 import logging
 from typing import Optional, Dict, Any
-from .models import ScreenReader  # If you moved ScreenReader to models.py
-# OR from .enums import ScreenReader  # If you created enums.py
+from .models import ScreenReader  
 from ..core.models import NotifySound
 #from models import NotifySound
 class AccessibilityManager:
@@ -18,15 +17,15 @@ class AccessibilityManager:
         self.supported_settings = {
             'voiceover': {
                 'voice': ['Alex', 'Victoria', 'Daniel'],  # Common VoiceOver voices
-                'rate': range(100, 401),  # 100-400 WPM
-                'pitch': range(0, 101),   # 0-100
-                'sound': ['Glass', 'Pop', 'Ping']  # Common macOS sounds
+                'rate': range(100, 401),  
+                'pitch': range(0, 101),   
+                'sound': ['Glass', 'Pop', 'Ping'] 
             },
             'nvda': {
-                'voice': ['Microsoft David', 'Microsoft Zira'],  # Common NVDA voices
-                'rate': range(0, 101),    # 0-100
-                'pitch': range(0, 101),   # 0-100
-                'sound': [True, False]     # Enable/disable sounds
+                'voice': ['Microsoft David', 'Microsoft Zira'],  
+                'rate': range(0, 101),    
+                'pitch': range(0, 101), 
+                'sound': [True, False]    
             },
             'jaws': {
                 'voice': ['Microsoft David', 'Microsoft Zira'],  # Common JAWS voices

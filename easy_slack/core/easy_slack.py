@@ -94,22 +94,19 @@ class EasySlack:
                 bot_token=tokens['bot_token']
             )
 
-            # Look up the user's Slack ID
             user_info = self.get_user_by_email(email)
             if not user_info:
                 self.logger.error(f"Could not find Slack user with email: {email}")
                 return False
 
-            # Set user information
             self._user_id = user_info['id']
             self._user_email = email
             
             self.logger.info(f"Logged in as user: {user_info['name']} (ID: {self._user_id})")
 
-            # Now that we have web_client and user info, attach to RuleEngine
+            # Attach web_client and user infto RuleEngine
             self.rule_engine.set_slack_client(self)
 
-            # Register event handlers
             self._event_handler.on_message(self._handle_message)
             self._event_handler.on_presence_change(self._handle_presence_change)
             self._event_handler.on_status_change(self._handle_status_change)
